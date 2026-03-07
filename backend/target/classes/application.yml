@@ -1,0 +1,39 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:your_google_client_id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:your_google_client_secret}
+            scope:
+              - openid
+              - profile
+              - email
+  datasource:
+    url: jdbc:h2:mem:recommenderdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+server:
+  port: 8080
+
+app:
+  frontend-url: http://localhost:5173
+
+logging:
+  level:
+    root: INFO
+    org.springframework.security: DEBUG

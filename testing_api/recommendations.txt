@@ -1,0 +1,64 @@
+============================================================
+Recommendation Run: 2026-02-28 20:16:48.047015
+User Profile: {'query': 'Java Developer', 'skills': '', 'location': 'Chennai', 'contract_time': '', 'category': '', 'salary_min': '', 'search_mode': 'job'}
+
+1. Java Developer
+   Company : Avatarsoft
+   Location: Chennai, Tamil Nadu
+   Salary  : 400000 – 700000
+   URL     : https://www.adzuna.in/details/2221675985?utm_medium=api&utm_source=a154d375
+
+2. Java Developer
+   Company : Indium Software
+   Location: Chennai, Tamil Nadu
+   Salary  : 600000 – 1500000
+   URL     : https://www.adzuna.in/details/3098924811?utm_medium=api&utm_source=a154d375
+
+3. Java Developer
+   Company : kaldan soft
+   Location: Chennai, Tamil Nadu
+   Salary  : 100000 – 1200000
+   URL     : https://www.adzuna.in/details/5331120250?utm_medium=api&utm_source=a154d375
+
+4. Java Developer
+   Company : Crewmates
+   Location: Chennai, Tamil Nadu
+   Salary  : 0 – 900000
+   URL     : https://www.adzuna.in/details/2335672844?utm_medium=api&utm_source=a154d375
+
+5. Java developer
+   Company : FirstMeridian
+   Location: Chennai, Tamil Nadu
+   Salary  : 1200000 – 1800000
+   URL     : https://www.adzuna.in/details/3509176474?utm_medium=api&utm_source=a154d375
+
+6. java developer
+   Company : Sadup Softech
+   Location: Chennai, Tamil Nadu
+   Salary  : 1000000 – 1500000
+   URL     : https://www.adzuna.in/details/4752831582?utm_medium=api&utm_source=a154d375
+
+7. Java Developer
+   Company : Bohiyaanam Talent Solutions
+   Location: Chennai, Tamil Nadu
+   Salary  : 100000 – 1500000
+   URL     : https://www.adzuna.in/details/3487898143?utm_medium=api&utm_source=a154d375
+
+8. Java Developer
+   Company : Zentrix nexus
+   Location: Chennai, Tamil Nadu
+   Salary  : 400000 – 700000
+   URL     : https://www.adzuna.in/details/5213369884?utm_medium=api&utm_source=a154d375
+
+9. Java Developer
+   Company : New Era India
+   Location: Chennai, Tamil Nadu
+   Salary  : 1000000 – 1500000
+   URL     : https://www.adzuna.in/details/5067552089?utm_medium=api&utm_source=a154d375
+
+10. java developer
+   Company : kaldan soft
+   Location: Chennai, Tamil Nadu
+   Salary  : 100000 – 1200000
+   URL     : https://www.adzuna.in/details/5282949228?utm_medium=api&utm_source=a154d375
+

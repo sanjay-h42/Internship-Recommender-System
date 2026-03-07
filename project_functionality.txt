@@ -1,0 +1,299 @@
+================================================================================
+     INTERNSHIP & JOB RECOMMENDER SYSTEM — FULL PROJECT FUNCTIONALITY GUIDE
+================================================================================
+Generated: 28 February 2026
+================================================================================
+
+
+════════════════════════════════════════════════════════════════════════════════
+1. PROJECT OVERVIEW
+════════════════════════════════════════════════════════════════════════════════
+
+The Internship & Job Recommender is a full-stack web application that helps
+Indian students and job seekers discover relevant internship or job opportunities
+based on their preferences and skills. It combines a React frontend with a Spring
+Boot backend (for authentication and history), a Python Flask recommendation 
+engine (for Adzuna API queries), and an AI career chatbot powered by RapidAPI.
+
+Architecture:
+  ┌─────────────────────────────────────────────────────┐
+  │         REACT FRONTEND  (Vite · Port 5173)          │
+  │    Sample/src — Components, Context, App, CSS       │
+  └───────────────┬──────────────────┬──────────────────┘
+                  │                  │
+        REST API  │        OAuth2    │
+                  ▼                  ▼
+  ┌───────────────────┐   ┌─────────────────────────────┐
+  │  PYTHON BACKEND   │   │   SPRING BOOT BACKEND       │
+  │  Flask · Port 5000│   │   Java · Port 8080          │
+  │  Adzuna API calls │   │   Google OAuth2 + Sessions  │
+  │  Scoring & rank   │   │   Search History (H2 DB)    │
+  └───────────────────┘   └─────────────────────────────┘
+          │                           │
+          ▼                           ▼
+   Adzuna Jobs API             Google Auth Servers
+   GeoDB Cities API
+   RapidAPI AI (open-ai21.p.rapidapi.com)
+
+
+════════════════════════════════════════════════════════════════════════════════
+2. FRONTEND — REACT APPLICATION  (Sample/)
+════════════════════════════════════════════════════════════════════════════════
+
+Tech Stack:  React 18, Vite, Axios, Vanilla CSS (Poppins font, glassmorphism)
+
+2.1  MAIN APPLICATION (App.jsx)
+--------------------------------
+- Manages all top-level state: search filters, job results, loading, errors,
+  search history panel visibility.
+- Coordinates between SearchForm, JobCard grid, SearchHistory, and AiChatbot.
+- Saves search history to Spring Boot backend after every successful search.
+- Restores saved searches from history panel back into the form.
+
+2.2  AUTHENTICATION CONTEXT (context/AuthContext.jsx)
+------------------------------------------------------
+- Wraps the entire app with user session state (user, loading).
+- On mount, calls GET /api/auth/me (Spring Boot) to check existing session.
+- Exposes:
+    login()  → Redirects to Google OAuth2 (/oauth2/authorization/google)
+    logout() → POSTs to /api/auth/logout, clears local user state
+
+2.3  HEADER COMPONENT (Components/Header.jsx)
+----------------------------------------------
+- Displays the app title and subtitle.
+- Shows "Sign in with Google" button for guests.
+- Shows user avatar, name, email, and "Sign Out" button for logged-in users.
+
+2.4  SEARCH FORM (Components/SearchForm.jsx)
+---------------------------------------------
+- Internship / Job Seeker toggle: switches the search context.
+- Inputs:
+    • Job/Internship Role   — free text (e.g. "Data Science Intern")
+    • Location              — city autocomplete (Indian cities via GeoDB API)
+    • Skills                — free text (e.g. "Python, React, SQL")
+    • Sector of Interest    — dropdown (IT, Engineering, Finance, Design, etc.)
+    • Mode of Work          — Any / Full Time / Part Time
+    • Minimum Salary/Stipend — numeric (₹ per annum)
+- "Find Internships" / "Find Jobs" button triggers the recommendation fetch.
+
+2.5  CITY AUTOCOMPLETE (Components/CityAutocomplete.jsx)
+---------------------------------------------------------
+- Debounced search (400ms) of Indian cities using GeoDB Cities RapidAPI.
+- Displays a dropdown of matching city names as the user types.
+- Clicking a suggestion fills the location field.
+
+2.6  JOB CARD (Components/JobCard.jsx)
+----------------------------------------
+- Renders a single internship/job result card with:
+    • Job title and company name
+    • Location
+    • Contract type badge (Full Time / Part Time)
+    • Sector/category badge
+    • Salary range (if available)
+    • Short description snippet
+    • "Apply Now" button linking to the original listing
+
+2.7  SEARCH HISTORY (Components/SearchHistory.jsx)
+----------------------------------------------------
+- Only available to logged-in users (shown via "📋 My Search History" button).
+- Fetches past searches from Spring Boot backend (GET /api/history).
+- Displays each search with: mode badge, query, location, timestamp.
+- Actions per history item:
+    • 🔄 Restore — re-populates the search form and auto-triggers a new search
+    • 🗑️ Delete  — removes that history entry from the database
+
+2.8  AI CAREER CHATBOT (Components/AiChatbot.jsx)  ← NEW
+----------------------------------------------------------
+- ONLY AVAILABLE TO LOGGED-IN USERS.
+- Floating action button (💬 CareerBot) fixed to the bottom-right of the page.
+- Clicking it opens a slide-up chat window panel.
+- Powered by: open-ai21.p.rapidapi.com  (RapidAPI)
+- Scope — STRICTLY limited to:
+    a) Career guidance (resumes, interviews, skill advice, career paths, 
+       salary insights, industry trends)
+    b) Form-filling help (suggests Role, Location, Skills, Sector values for 
+       the search form based on user goals)
+- Off-topic requests (math, general knowledge, entertainment, etc.) are 
+  rejected via a strict system prompt — the bot responds with a polite 
+  redirection message.
+- Features:
+    • Persistent conversation history within the session
+    • Animated typing indicator (bouncing dots) while AI is responding
+    • Enter to send, Shift+Enter for new lines
+    • Auto-scrolling to latest message
+    • Smooth slide-up animation on open, fade-in per message
+    • Mobile responsive — full-width on small screens
+- API Call Structure:
+    POST https://open-ai21.p.rapidapi.com/chat
+    Headers: x-rapidapi-key, x-rapidapi-host
+    Body: { messages: [{role, content}, ...], web_access: false }
+
+
+════════════════════════════════════════════════════════════════════════════════
+3. PYTHON RECOMMENDATION ENGINE  (testing_api/ or similar)
+════════════════════════════════════════════════════════════════════════════════
+
+Tech Stack:  Python 3, Flask, Requests
+
+- Runs on Port 5000.
+- Endpoint: GET /api/recommendations
+- Accepts query parameters:
+    q            — job role keyword
+    location     — city/region (defaults to India)
+    skills       — comma-separated skill keywords
+    contract_time — full_time | part_time (optional filter)
+    category     — Adzuna category slug (e.g. "it-jobs")
+    salary_min   — minimum annual salary in ₹ (optional)
+    search_mode  — "internship" | "job"
+
+- Logic:
+    1. Builds a keyword query for Adzuna ("internship" vs "job" context inferred)
+    2. Calls the Adzuna Jobs API for India results
+    3. Applies scoring/ranking based on skill match, salary, and location
+    4. Returns top results as JSON: { success: true, results: [...] }
+
+
+════════════════════════════════════════════════════════════════════════════════
+4. SPRING BOOT BACKEND  (backend/)
+════════════════════════════════════════════════════════════════════════════════
+
+Tech Stack:  Java 17, Spring Boot 3, Spring Security, Spring Data JPA, H2 DB
+
+4.1  GOOGLE OAUTH2 AUTHENTICATION
+-----------------------------------
+- Configured via Spring Security OAuth2 client.
+- Login flow:
+    1. Frontend calls /oauth2/authorization/google
+    2. Spring redirects user to Google consent screen
+    3. Google returns authorization code → Spring exchanges for tokens
+    4. User profile stored in session; redirect back to frontend
+- Endpoints:
+    GET  /api/auth/me      — returns logged-in user profile (name, email, picture)
+    POST /api/auth/logout  — invalidates session
+
+4.2  SEARCH HISTORY API
+------------------------
+- Requires authenticated session (Spring Security guards these routes).
+- Endpoints:
+    POST   /api/history         — saves a new search entry for the logged-in user
+    GET    /api/history         — retrieves all saved searches (newest first)
+    DELETE /api/history/{id}    — deletes a specific history entry by ID
+- Data stored: query, location, skills, sector, searchMode, mode, salaryMin,
+  timestamp, and user reference.
+
+4.3  DATABASE
+--------------
+- H2 in-memory database (auto-configured for development).
+- JPA entities: User, SearchHistory
+- Relationships: User has many SearchHistory entries
+
+
+════════════════════════════════════════════════════════════════════════════════
+5. EXTERNAL API INTEGRATIONS
+════════════════════════════════════════════════════════════════════════════════
+
+┌──────────────────────────────┬──────────────────────────────────────────────┐
+│ API                          │ Purpose                                      │
+├──────────────────────────────┼──────────────────────────────────────────────┤
+│ Adzuna Jobs API              │ Job/internship listing data for India         │
+│ api.adzuna.com/v1/api/jobs   │                                              │
+├──────────────────────────────┼──────────────────────────────────────────────┤
+│ GeoDB Cities API             │ Indian city name autocomplete in search form  │
+│ (via RapidAPI)               │ wft-geo-db.p.rapidapi.com                    │
+├──────────────────────────────┼──────────────────────────────────────────────┤
+│ OpenAI21 Chat API            │ AI career chatbot — career guidance +        │
+│ (via RapidAPI)               │ form-fill assistance (logged-in users only)  │
+│ open-ai21.p.rapidapi.com     │                                              │
+├──────────────────────────────┼──────────────────────────────────────────────┤
+│ Google OAuth2                │ User authentication (Sign in with Google)    │
+│ accounts.google.com          │                                              │
+└──────────────────────────────┴──────────────────────────────────────────────┘
+
+
+════════════════════════════════════════════════════════════════════════════════
+6. USER JOURNEY / FLOW
+════════════════════════════════════════════════════════════════════════════════
+
+GUEST USER:
+  1. Opens http://localhost:5173
+  2. Sees the app with search form — can search and view results
+  3. No history panel, no AI chatbot available
+  4. Clicks "Sign in with Google" in the header
+
+LOGGED-IN USER:
+  1. Completes Google OAuth2 → avatar + name appear in header
+  2. "📋 My Search History" button appears (top-right of main content)
+  3. "💬 CareerBot" floating button appears (bottom-right corner)
+  4. Can fill form → click "Find Internships/Jobs" → view ranked results
+  5. Each successful search is auto-saved to history
+  6. Can open history panel → restore past searches or delete them
+  7. Can open CareerBot → get career advice or form-fill suggestions
+  8. Clicks "Sign Out" → session cleared, chatbot and history hidden
+
+
+════════════════════════════════════════════════════════════════════════════════
+7. HOW TO RUN THE PROJECT
+════════════════════════════════════════════════════════════════════════════════
+
+STEP 1 — Start the Python Recommendation Engine:
+  cd <project_root>/testing_api   (or wherever app.py is)
+  pip install -r requirements.txt  (first time only)
+  python app.py
+  → Runs on http://localhost:5000
+
+STEP 2 — Start the Spring Boot Backend:
+  cd <project_root>/backend
+  mvn spring-boot:run
+  (or open in IntelliJ/Eclipse and run the main class)
+  → Runs on http://localhost:8080
+  → Requires Google OAuth2 client-id and client-secret in application.properties:
+      spring.security.oauth2.client.registration.google.client-id=YOUR_CLIENT_ID
+      spring.security.oauth2.client.registration.google.client-secret=YOUR_SECRET
+      spring.security.oauth2.client.registration.google.redirect-uri=
+        http://localhost:8080/login/oauth2/code/google
+
+STEP 3 — Start the React Frontend:
+  cd <project_root>/Sample
+  npm install   (first time only)
+  npm run dev
+  → Runs on http://localhost:5173
+
+STEP 4 — Configure RapidAPI Keys:
+  a) GeoDB Cities (city autocomplete):
+     File: Sample/src/Components/CityAutocomplete.jsx
+     Replace: YOUR_RAPIDAPI_KEY_HERE
+
+  b) CareerBot AI Chatbot:
+     File: Sample/src/Components/AiChatbot.jsx  (line 11)
+     Replace: YOUR_RAPIDAPI_KEY_HERE
+     Host:    open-ai21.p.rapidapi.com
+
+
+════════════════════════════════════════════════════════════════════════════════
+8. KEY DESIGN DECISIONS
+════════════════════════════════════════════════════════════════════════════════
+
+• CHATBOT SCOPE ENFORCEMENT: The AI chatbot uses a strict system prompt sent
+  with every API request. This ensures that even if users ask unrelated 
+  questions, the model is instructed to deflect them — no client-side message
+  filtering or blocking is used, making the experience conversational.
+
+• AUTH GATING: The AI chatbot and search history features are conditionally
+  rendered in React (user && <Component />) based on the auth context. This
+  prevents unauthenticated API calls and hides premium features from guests.
+
+• HISTORY AUTO-SAVE: Search history is saved silently in the background after
+  every successful fetch — users don't need to manually save anything.
+
+• SCORING: The Python backend scores Adzuna results based on skill term
+  frequency, salary, and location proximity — not purely by Adzuna's own
+  ranking — giving more personalized recommendations.
+
+• GLASSMORPHISM UI: The entire frontend uses a dark navy gradient background 
+  with glass-effect cards (backdrop-filter: blur), consistent with modern
+  premium web design patterns.
+
+
+════════════════════════════════════════════════════════════════════════════════
+                            END OF DOCUMENTATION
+================================================================================

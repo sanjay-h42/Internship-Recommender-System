@@ -1,0 +1,58 @@
+services:
+  # Python Recommendation Service
+  python-service:
+    build:
+      context: ./testing_api
+      dockerfile: Dockerfile
+    container_name: python-service
+    restart: always
+    environment:
+      - ADZUNA_APP_ID=${ADZUNA_APP_ID}
+      - ADZUNA_APP_KEY=${ADZUNA_APP_KEY}
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+  # Spring Boot Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: spring-backend
+    restart: always
+    environment:
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - PYTHON_SERVICE_URL=http://python-service:5000
+    ports:
+      - "8080:8080"
+    volumes:
+      - h2_data:/app/data
+    depends_on:
+      - python-service
+    networks:
+      - app-network
+
+  # React Frontend Service
+  frontend:
+    build:
+      context: ./Sample
+      dockerfile: Dockerfile
+      args:
+        - VITE_RAPIDAPI_KEY=${VITE_RAPIDAPI_KEY}
+    container_name: react-frontend
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  h2_data:

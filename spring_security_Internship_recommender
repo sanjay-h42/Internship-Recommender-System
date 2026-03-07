@@ -1,0 +1,102 @@
+# Google OAuth2 + Search History — Walkthrough
+
+## What Was Built
+
+### Spring Boot Backend (`d:\InternShip_Recommender\backend\`)
+
+| File | Purpose |
+|---|---|
+| `pom.xml` | Maven config: Spring Web, Security, OAuth2 Client, JPA, H2, Lombok |
+| `application.yml` | OAuth2 credentials (fill in), H2 in-memory DB, port 8080 |
+| `model/User.java` | JPA entity: googleId, name, email, pictureUrl |
+| `model/SearchHistory.java` | JPA entity: all search params + timestamp, linked to User |
+| `repository/UserRepository.java` | findByGoogleId, findByEmail |
+| `repository/SearchHistoryRepository.java` | findByUserOrderByTimestampDesc, deleteByIdAndUser |
+| `service/UserService.java` | loadOrCreateUser from OidcUser |
+| `service/HistoryService.java` | saveSearch, getHistory (latest 20), deleteEntry |
+| `security/OAuth2LoginSuccessHandler.java` | Persists user after Google login, redirects to React at `localhost:5173` |
+| `security/SecurityConfig.java` | CSRF off, CORS for React, OAuth2 login, logout |
+| `controller/AuthController.java` | `GET /api/auth/me` → user info or 401 |
+| `controller/HistoryController.java` | `GET/POST/DELETE /api/history` |
+
+### React Frontend Changes (`d:\InternShip_Recommender\Sample\src\`)
+
+| File | Change |
+|---|---|
+| `context/AuthContext.jsx` | **NEW** — polls `/api/auth/me`, exposes `user`, `login()`, `logout()` |
+| `Components/SearchHistory.jsx` | **NEW** — history panel with restore ▶ and delete 🗑 buttons |
+| `Components/Header.jsx` | **UPDATED** — shows Google avatar + name, or "Sign in with Google" button |
+| `main.jsx` | **UPDATED** — wraps `<App>` with `<AuthProvider>` |
+| `App.jsx` | **UPDATED** — saves search to `/api/history` on success, toggle panel |
+| `App.css` | **UPDATED** — styles for login button, user chip, history panel, list items |
+
+---
+
+## How to Run
+
+### Step 1: Set Google OAuth2 Credentials
+
+Edit `d:\InternShip_Recommender\backend\src\main\resources\application.yml`:
+```yaml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: YOUR_GOOGLE_CLIENT_ID      # ← paste here
+            client-secret: YOUR_GOOGLE_CLIENT_SECRET  # ← paste here
+```
+
+> Get credentials at [console.cloud.google.com](https://console.cloud.google.com)
+> → APIs & Services → Credentials → Create OAuth2 Client ID (Web app)
+> → Redirect URI: `http://localhost:8080/login/oauth2/code/google`
+
+### Step 2: Start the Spring Boot Backend
+
+```powershell
+cd d:\InternShip_Recommender\backend
+mvn spring-boot:run
+```
+Runs on **http://localhost:8080**
+
+### Step 3: Start the React Frontend
+
+```powershell
+cd d:\InternShip_Recommender\Sample
+npm run dev
+```
+Runs on **http://localhost:5173**
+
+---
+
+## User Flows
+
+### Anonymous User
+- Opens `localhost:5173` → sees "Sign in with Google" in the header
+- Can still search for internships/jobs normally
+- History is not saved (no history button shown)
+
+### Logged-in User
+1. Clicks "Sign in with Google" → redirected to Google login
+2. After approval → redirected back to `localhost:5173`
+3. Header shows their Google avatar, name, email + "Sign Out" button
+4. A **📋 My Search History** button appears below the header
+5. Every successful search is automatically saved to history
+6. Click **📋 My Search History** → side panel opens showing past searches
+7. Click **▶** on any entry → form fields are restored and search re-runs
+8. Click **🗑** to delete a history entry
+9. Click **Sign Out** → session cleared, reverts to anonymous mode
+
+---
+
+## API Endpoints
+
+| Method | URL | Auth | Description |
+|---|---|---|---|
+| GET | `/api/auth/me` | optional | Returns `{ id, name, email, picture }` or 401 |
+| GET | `/api/auth/login-url` | none | Returns OAuth2 login path |
+| POST | `/api/auth/logout` | session | Invalidates session |
+| GET | `/api/history` | required | Get last 20 searches |
+| POST | `/api/history` | required | Save a search entry |
+| DELETE | `/api/history/{id}` | required | Delete a search entry |
